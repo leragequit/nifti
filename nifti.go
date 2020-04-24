@@ -87,17 +87,17 @@ func (header *Nifti1Header) LoadHeader(filepath string) {
 }
 
 type Nifti1Image struct { /*!< Image storage struct **/
-	ndim     int32    /*!< last dimension greater than 1 (1..7) */
-	nx       int32    /*!< dimensions of grid array             */
-	ny       int32    /*!< dimensions of grid array             */
-	nz       int32    /*!< dimensions of grid array             */
-	nt       int32    /*!< dimensions of grid array             */
-	nu       int32    /*!< dimensions of grid array             */
-	nv       int32    /*!< dimensions of grid array             */
-	nw       int32    /*!< dimensions of grid array             */
-	dim      [8]int32 /*!< dim[0]=ndim, dim[1]=nx, etc.         */
-	nvox     uint     /*!< number of voxels = nx*ny*nz*...*nw   */
-	nbyper   int32    /*!< bytes per voxel, matches datatype    */
+	ndim     uint32 	  /*!< last dimension greater than 1 (1..7) */
+	nx       uint32    /*!< dimensions of grid array             */
+	ny       uint32    /*!< dimensions of grid array             */
+	nz       uint32    /*!< dimensions of grid array             */
+	nt       uint32    /*!< dimensions of grid array             */
+	nu       uint32    /*!< dimensions of grid array             */
+	nv       uint32    /*!< dimensions of grid array             */
+	nw       uint32    /*!< dimensions of grid array             */
+	dim      [8]uint32 /*!< dim[0]=ndim, dim[1]=nx, etc.         */
+	nvox     uint64     /*!< number of voxels = nx*ny*nz*...*nw   */
+	nbyper   uint32    /*!< bytes per voxel, matches datatype    */
 	datatype int32    /*!< type of data in voxels: DT_* code    */
 
 	dx     float32    /*!< grid spacings      */
@@ -183,17 +183,17 @@ func (img *Nifti1Image) LoadImage(filepath string, rdata bool) {
 		img.header = header
 	}
 	// set dimensions of data array
-	img.ndim, img.dim[0] = int32(header.Dim[0]), int32(header.Dim[0])
-	img.nx, img.dim[1] = int32(header.Dim[1]), int32(header.Dim[1])
-	img.ny, img.dim[2] = int32(header.Dim[2]), int32(header.Dim[2])
-	img.nz, img.dim[3] = int32(header.Dim[3]), int32(header.Dim[3])
-	img.nt, img.dim[4] = int32(header.Dim[4]), int32(header.Dim[4])
-	img.nu, img.dim[5] = int32(header.Dim[5]), int32(header.Dim[5])
-	img.nv, img.dim[6] = int32(header.Dim[6]), int32(header.Dim[6])
-	img.nw, img.dim[7] = int32(header.Dim[7]), int32(header.Dim[7])
+	img.ndim, img.dim[0] = uint32(header.Dim[0]), uint32(header.Dim[0])
+	img.nx, img.dim[1] = uint32(header.Dim[1]), uint32(header.Dim[1])
+	img.ny, img.dim[2] = uint32(header.Dim[2]), uint32(header.Dim[2])
+	img.nz, img.dim[3] = uint32(header.Dim[3]), uint32(header.Dim[3])
+	img.nt, img.dim[4] = uint32(header.Dim[4]), uint32(header.Dim[4])
+	img.nu, img.dim[5] = uint32(header.Dim[5]), uint32(header.Dim[5])
+	img.nv, img.dim[6] = uint32(header.Dim[6]), uint32(header.Dim[6])
+	img.nw, img.dim[7] = uint32(header.Dim[7]), uint32(header.Dim[7])
 	img.nvox = 1
 	for i := int16(1); i <= header.Dim[0]; i++ {
-		img.nvox *= uint(header.Dim[i])
+		img.nvox *= uint64(header.Dim[i])
 	}
 	img.volumeN = int(img.dim[1] * img.dim[2] * img.dim[3])
 
@@ -204,7 +204,7 @@ func (img *Nifti1Image) LoadImage(filepath string, rdata bool) {
 	}
 
 	//init byte2float32 function
-	img.nbyper = int32(header.Bitpix) / 8
+	img.nbyper = uint32(header.Bitpix) / 8
 
 	// fmt.Println(header)
 	//setting function to convert float2byte or byte2float
@@ -274,44 +274,50 @@ func (img *Nifti1Image) LoadImage(filepath string, rdata bool) {
 }
 
 // x,y,z,t,start at zero
-func (img *Nifti1Image) GetAt(x, y, z, t int) float32 {
+func (img *Nifti1Image) GetAt(x, y, z, t uint32) float32 {
 
-	tIndex := int32(t) * img.nx * img.ny * img.nz
-	zIndex := img.nx * img.ny * int32(z)
-	yIndex := img.nx * int32(y)
-	xIndex := int32(x)
-	index := int32(tIndex) + zIndex + yIndex + xIndex
-	return img.byte2float(img.data[index*img.nbyper : (index+1)*img.nbyper]) //shift byte
+	tIndex := img.nx * img.ny * img.nz * t
+	zIndex := img.nx * img.ny * z
+	yIndex := img.nx * y
+	xIndex := x
+	index := uint64(tIndex + zIndex + yIndex + xIndex)
+
+	return img.byte2float(img.data[index * uint64(img.nbyper) : (index + 1) * uint64(img.nbyper)]) //shift byte
 }
 
-func (img *Nifti1Image) SetAt(x, y, z, t int, elem float32) {
+func (img *Nifti1Image) SetAt(x, y, z, t uint32, elem float32) {
 
-	tIndex := int32(t) * img.nx * img.ny * img.nz
-	zIndex := img.nx * img.ny * int32(z)
-	yIndex := img.nx * int32(y)
-	xIndex := int32(x)
-	index := int32(tIndex) + zIndex + yIndex + xIndex
-	copy(img.data[index*img.nbyper:(index+1)*img.nbyper], img.float2byte(elem))
+	tIndex := img.nx * img.ny * img.nz * t
+	zIndex := img.nx * img.ny * z
+	yIndex := img.nx * y
+	xIndex := x
+	index := uint64(tIndex + zIndex + yIndex + xIndex)
+
+	copy(img.data[index * uint64(img.nbyper) :(index + 1) * uint64(img.nbyper)], img.float2byte(elem))
 }
 
-func (img *Nifti1Image) GetTimeSeries(x, y, z int) []float32 {
+func (img *Nifti1Image) GetTimeSeries(x, y, z uint32) []float32 {
 	var timeSeries []float32
-	timeNum := len(img.data) / int(img.volumeN*int(img.nbyper))
-	for i := 0; i < timeNum; i++ {
+	timeNum := uint32(len(img.data) / int(img.volumeN*int(img.nbyper)))
+	var i uint32
+	for i = 0; i < timeNum; i++ {
 		timeSeries = append(timeSeries, img.GetAt(x, y, z, i))
 	}
 	return timeSeries
 }
 
-func (img *Nifti1Image) GetSlice(z, t int) [][]float32 {
-	sliceX := int(img.nx)
-	sliceY := int(img.ny)
+func (img *Nifti1Image) GetSlice(z, t uint32) [][]float32 {
+	sliceX := img.nx
+	sliceY := img.ny
 	slice := make([][]float32, sliceX)
 	for i := range slice {
 		slice[i] = make([]float32, sliceY)
 	}
-	for xi := 0; xi < sliceX; xi++ {
-		for yi := 0; yi < sliceY; yi++ {
+	var xi uint32
+	var yi uint32
+
+	for xi = 0; xi < sliceX; xi++ {
+		for yi = 0; yi < sliceY; yi++ {
 			slice[xi][yi] = img.GetAt(xi, yi, z, t)
 			// fmt.Println(xi, yi, z, t)
 		}
