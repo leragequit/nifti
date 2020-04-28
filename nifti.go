@@ -17,7 +17,7 @@ type Nifti1Header struct {
 	DbName       [18]byte /*!< ++UNUSED++            */ /* char db_name[18];    */
 	Extents      int32    /*!< ++UNUSED++            */ /* int32 extents;         */
 	SessionError int16    /*!< ++UNUSED++            */ /* short session_error; */
-	Regular      byte     /*!< ++UNUSED++            */ /* char regular;        */
+	Regular      byte    /*!< ++UNUSED++            */ /* char regular;        */
 	DimInfo      byte     /*!< MRI slice ordering.   */ /* char hkey_un0;       */
 
 	/*--- was image_dimension substruct ---*/
@@ -355,6 +355,7 @@ func (img *Nifti1Image) Save(filename string) {
 		panic(err)
 	}
 	gzipWriter := gzip.NewWriter(file)
+	defer gzipWriter.Close()
 
 	binary.Write(gzipWriter, binary.LittleEndian, img.header)
 	if padding > 0 {
