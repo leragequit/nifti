@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
-	"reflect"
 	"strings"
 )
 
@@ -163,8 +162,8 @@ type Nifti1Image struct { /*!< Image storage struct **/
 	byteorder   int32       /*!< byte order on disk (MSB_ or LSB_FIRST) */
 	data        []byte      /*!< pointer to data: nbyper*nvox bytes     */
 	volumeN     int         //defined by me, volume vox num
-	byte2floatF interface{} //defined by me, byte2floatF
-	float2byteF interface{}
+	byte2floatF func([]byte) float32 //defined by me, byte2floatF
+	float2byteF func([]byte, float32)
 	header      Nifti1Header //defined by me, it might be a good idea store the img header in the image structure
 
 	numExt int32 /*!< number of extensions in ext_list       */
@@ -336,14 +335,14 @@ func (img *Nifti1Image) GetDims() [4]int {
 
 //convert byte to float32,init in LoadImage
 func (img *Nifti1Image) byte2float(data []byte) float32 {
-	v := reflect.ValueOf(img.byte2floatF).Call([]reflect.Value{reflect.ValueOf(data)})[0].Interface()
-	return v.(float32)
+	v := img.byte2floatF(data)
+	return v
 }
 
 //convert float32 to byte,init in LoadImage
 func (img *Nifti1Image) float2byte(data float32) []byte {
 	buff := make([]byte, img.nbyper)
-	reflect.ValueOf(img.float2byteF).Call([]reflect.Value{reflect.ValueOf(buff), reflect.ValueOf(data)})
+	img.float2byteF(buff, data)
 	return buff
 }
 
@@ -417,23 +416,3 @@ func NewImg(dimX, dimY, dimZ, dimT int) *Nifti1Image {
 	return &img
 }
 
-// x.LoadImage("MNI152.nii.gz", true)
-// sliceTest := x.GetSlice(24, 0)
-// // fmt.Println(len(sliceTest), len(sliceTest[0])) //start from 0
-// // fmt.Println(x.GetTimeSeries(50, 50, 50))
-// img := image.NewGray16(image.Rect(0, 0, len(sliceTest), len(sliceTest[0])))
-// // fmt.Println(sliceTest)
-// for i, row := range sliceTest {
-// 	for j, col := range row {
-// 		img.SetGray16(i, j, color.Gray16{Y: uint16(col)})
-// 	}
-// }
-// f, err := os.Create("test.jpg")
-// defer f.Close()
-// if err != nil {
-// 	log.Fatal(err)
-// }
-// err = jpeg.Encode(f, img, &jpeg.Options{Quality: 100})
-// if err != nil {
-// 	log.Fatal(err)
-// }
