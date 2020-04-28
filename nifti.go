@@ -284,6 +284,47 @@ func (img *Nifti1Image) GetAt(x, y, z, t uint32) float32 {
 	return img.byte2float(img.data[index * uint64(img.nbyper) : (index + 1) * uint64(img.nbyper)]) //shift byte
 }
 
+func (img *Nifti1Image) GetHeader() Nifti1Header {
+	return img.header
+}
+
+func (img *Nifti1Image) SetNewHeader(newHeader Nifti1Header) {
+	img.header = newHeader
+	return
+}
+
+func (img *Nifti1Image) SetHeaderDim(dimX, dimY, dimZ, dimT int) {
+	img.header.SizeofHdr = 348
+	img.header.Regular = 114
+	if dimT > 1 {
+		img.header.Dim[0] = 4
+	} else {
+		img.header.Dim[0] = 3
+	}
+	img.header.Dim[1] = int16(dimX)
+	img.header.Dim[2] = int16(dimY)
+	img.header.Dim[3] = int16(dimZ)
+	img.header.Bitpix = 32
+	img.header.Pixdim = [8]float32{-1, 2, 2, 2, 1, 1, 1, 1}
+	img.header.VoxOffset = 348
+	img.header.SclSlope = 1
+	img.header.XyztUnits = 10
+	img.header.CalMax = 8000
+	img.header.CalMin = 3000
+	img.header.QformCode = 4
+	img.header.SformCode = 4
+	img.header.QuaternC = 1
+	img.header.QoffsetX = 90
+	img.header.QoffsetY = -126
+	img.header.QoffsetZ = -72
+	img.header.SrowX = [4]float32{-2, 0, 0, 90}
+	img.header.SrowY = [4]float32{0, 2, 0, -126}
+	img.header.SrowZ = [4]float32{0, 0, 2, -72}
+	img.header.Magic = [4]byte{110, 43, 49, 0}
+
+	return
+}
+
 func (img *Nifti1Image) SetAt(x, y, z, t uint32, elem float32) {
 
 	tIndex := img.nx * img.ny * img.nz * t
