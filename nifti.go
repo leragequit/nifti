@@ -1,7 +1,6 @@
 package nifti
 
 import (
-	"compress/gzip"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -9,6 +8,8 @@ import (
 	"math"
 	"os"
 	"strings"
+
+	gzip "github.com/klauspost/pgzip"
 )
 
 type Nifti1Header struct {

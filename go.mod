@@ -2,4 +2,7 @@ module github.com/KyungWonPark/nifti
 
 go 1.14
 
-require golang.org/x/tools v0.0.0-20200425043458-8463f397d07c // indirect
+require (
+	github.com/klauspost/compress v1.10.5 // indirect
+	github.com/klauspost/pgzip v1.2.3
+)
