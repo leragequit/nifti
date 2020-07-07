@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	pkgPath "path/filepath"
 	"strings"
 
 	gzip "github.com/klauspost/pgzip"
@@ -18,7 +19,7 @@ type Nifti1Header struct {
 	DbName       [18]byte /*!< ++UNUSED++            */ /* char db_name[18];    */
 	Extents      int32    /*!< ++UNUSED++            */ /* int32 extents;         */
 	SessionError int16    /*!< ++UNUSED++            */ /* short session_error; */
-	Regular      byte    /*!< ++UNUSED++            */ /* char regular;        */
+	Regular      byte     /*!< ++UNUSED++            */ /* char regular;        */
 	DimInfo      byte     /*!< MRI slice ordering.   */ /* char hkey_un0;       */
 
 	/*--- was image_dimension substruct ---*/
@@ -87,7 +88,7 @@ func (header *Nifti1Header) LoadHeader(filepath string) {
 }
 
 type Nifti1Image struct { /*!< Image storage struct **/
-	ndim     uint32 	  /*!< last dimension greater than 1 (1..7) */
+	ndim     uint32    /*!< last dimension greater than 1 (1..7) */
 	nx       uint32    /*!< dimensions of grid array             */
 	ny       uint32    /*!< dimensions of grid array             */
 	nz       uint32    /*!< dimensions of grid array             */
@@ -96,9 +97,9 @@ type Nifti1Image struct { /*!< Image storage struct **/
 	nv       uint32    /*!< dimensions of grid array             */
 	nw       uint32    /*!< dimensions of grid array             */
 	dim      [8]uint32 /*!< dim[0]=ndim, dim[1]=nx, etc.         */
-	nvox     uint64     /*!< number of voxels = nx*ny*nz*...*nw   */
+	nvox     uint64    /*!< number of voxels = nx*ny*nz*...*nw   */
 	nbyper   uint32    /*!< bytes per voxel, matches datatype    */
-	datatype int32    /*!< type of data in voxels: DT_* code    */
+	datatype int32     /*!< type of data in voxels: DT_* code    */
 
 	dx     float32    /*!< grid spacings      */
 	dy     float32    /*!< grid spacings      */
@@ -156,13 +157,13 @@ type Nifti1Image struct { /*!< Image storage struct **/
 	descrip [80]byte /*!< optional text to describe dataset   */
 	auxFile [24]byte /*!< auxiliary filename                  */
 
-	fname       string      /*!< header filename (.hdr or .nii)         */
-	iname       string      /*!< image filename  (.img or .nii)         */
-	inameOffset int32       /*!< offset into iname where data starts    */
-	swapsize    int32       /*!< swap unit in image data (might be 0)   */
-	byteorder   int32       /*!< byte order on disk (MSB_ or LSB_FIRST) */
-	data        []byte      /*!< pointer to data: nbyper*nvox bytes     */
-	volumeN     int         //defined by me, volume vox num
+	fname       string               /*!< header filename (.hdr or .nii)         */
+	iname       string               /*!< image filename  (.img or .nii)         */
+	inameOffset int32                /*!< offset into iname where data starts    */
+	swapsize    int32                /*!< swap unit in image data (might be 0)   */
+	byteorder   int32                /*!< byte order on disk (MSB_ or LSB_FIRST) */
+	data        []byte               /*!< pointer to data: nbyper*nvox bytes     */
+	volumeN     int                  //defined by me, volume vox num
 	byte2floatF func([]byte) float32 //defined by me, byte2floatF
 	float2byteF func([]byte, float32)
 	header      Nifti1Header //defined by me, it might be a good idea store the img header in the image structure
@@ -257,16 +258,26 @@ func (img *Nifti1Image) LoadImage(filepath string, rdata bool) {
 	img.dw, img.pixdim[7] = header.Pixdim[7], header.Pixdim[7]
 
 	if rdata {
-		reader, err := gzipOpen(filepath)
-		defer reader.Close()
-		if err != nil {
-			fmt.Println("open data error")
-			return
-		}
-		data, err := ioutil.ReadAll(reader)
-		if err != nil {
-			fmt.Println("read data error")
-			return
+		var data []byte
+		var err error
+		if pkgPath.Ext(filepath) == ".gz" {
+			reader, err := gzipOpen(filepath)
+			defer reader.Close()
+			if err != nil {
+				fmt.Println("open data error")
+				return
+			}
+			data, err = ioutil.ReadAll(reader)
+			if err != nil {
+				fmt.Println("read data error")
+				return
+			}
+		} else {
+			data, err = ioutil.ReadFile(filepath)
+			if err != nil {
+				fmt.Println("open data error")
+				return
+			}
 		}
 		img.data = data[uint(header.VoxOffset):len(data)]
 		// fmt.Println(len(img.data), len(data), uint(header.VoxOffset))
@@ -282,7 +293,7 @@ func (img *Nifti1Image) GetAt(x, y, z, t uint32) float32 {
 	xIndex := x
 	index := uint64(tIndex + zIndex + yIndex + xIndex)
 
-	return img.byte2float(img.data[index * uint64(img.nbyper) : (index + 1) * uint64(img.nbyper)]) //shift byte
+	return img.byte2float(img.data[index*uint64(img.nbyper) : (index+1)*uint64(img.nbyper)]) //shift byte
 }
 
 func (img *Nifti1Image) GetHeader() Nifti1Header {
@@ -334,7 +345,7 @@ func (img *Nifti1Image) SetAt(x, y, z, t uint32, elem float32) {
 	xIndex := x
 	index := uint64(tIndex + zIndex + yIndex + xIndex)
 
-	copy(img.data[index * uint64(img.nbyper) :(index + 1) * uint64(img.nbyper)], img.float2byte(elem))
+	copy(img.data[index*uint64(img.nbyper):(index+1)*uint64(img.nbyper)], img.float2byte(elem))
 }
 
 func (img *Nifti1Image) GetTimeSeries(x, y, z uint32) []float32 {
@@ -458,4 +469,3 @@ func NewImg(dimX, dimY, dimZ, dimT int) *Nifti1Image {
 	img.data = make([]byte, dimX*dimY*dimZ*dimT*int(img.nbyper))
 	return &img
 }
-
