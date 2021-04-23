@@ -350,13 +350,7 @@ func (img *Nifti1Image) SetHeaderDim2(dimX, dimY, dimZ, dimT int) {
 
 	return
 }
-func (img *Nifti1Image) SetAt(x, y, z, t uint32, elem float32) {
-	if dimT > 1 {
-		img.header.Dim[0] = 4
-	} else {
-		img.header.Dim[0] = 3
-	}
-	
+func (img *Nifti1Image) SetAt(x, y, z, t uint32, elem float32) {	
 	tIndex := img.nx * img.ny * img.nz * t
 	zIndex := img.nx * img.ny * z
 	yIndex := img.nx * y
