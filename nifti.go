@@ -338,11 +338,8 @@ func (img *Nifti1Image) SetHeaderDim(dimX, dimY, dimZ, dimT int) {
 }
 
 func (img *Nifti1Image) SetHeaderDim2(dimX, dimY, dimZ, dimT int) {
-	if dimT > 1 {
-		img.header.Dim[0] = 4
-	} else {
-		img.header.Dim[0] = 3
-	}
+
+	img.header.Dim[0] = 3
 	img.header.Dim[1] = int16(dimX)
 	img.header.Dim[2] = int16(dimY)
 	img.header.Dim[3] = int16(dimZ)
