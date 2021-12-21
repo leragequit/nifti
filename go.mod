@@ -1,4 +1,4 @@
-module github.com/KyungWonPark/nifti
+module github.com/leragequit/nifti
 
 go 1.14
 
